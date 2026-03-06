@@ -1,7 +1,18 @@
 To run the scripts
-put in directory on machine. I usually create a new directory for the scripts to run in
-using powershell ( I use admin mode as you may need to install cmdlts)
+
+Create a directory for your scripts
+this avoids any issues with paths or if you changed the script you know the latest and greatest is where it needs to be
+
+Run powershell as an admin
+Run the following to avoid any policy issues
+
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+this is only for current session, does not change anything system wide
+
 cd to directory
-enter this into power shell .\scriptname,ps1
+for me it looks like the following
+cd C:\temp\scripts
+
+enter this into power shell .\scriptname.ps1
 
 
