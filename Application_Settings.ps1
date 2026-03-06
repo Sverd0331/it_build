@@ -1,8 +1,11 @@
 <#
 
 This is the silent install script to utilize with Intune
-to add to intune use the https://github.com/Microsoft/Microsoft-Win32-Content-Prep-Tool
+You can run as a powersehll script policy or package as a win32 app using the below tool
+to add to intune as a win32 app use the https://github.com/Microsoft/Microsoft-Win32-Content-Prep-Tool
 instead of adding the application you will add this as a .ps1
+the install cmd for will be 
+%SystemRoot%\SysNative\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -NoLogo -NoProfile -WindowStyle Hidden -File "%~dp0install.ps1"
 #>
 <#  
     Build Script
