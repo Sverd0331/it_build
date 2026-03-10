@@ -13,7 +13,7 @@ $user1 = Read-Host "Enter email of user to mirror FROM"
 $user2 = Read-Host "Enter email of user to mirror TO"
 
 # Confirm
-Write-Host "Copy all group memberships from $user1 → $user2 ?"
+Write-Host "Copy all group memberships from $user1 to $user2 ?"
 $confirmation = Read-Host "Proceed? [y/n]"
 if ($confirmation -ne "y") { Write-Host "Cancelled."; exit }
 
@@ -61,4 +61,5 @@ foreach ($g in $groups) {
 }
 
 Disconnect-MgGraph
+
 
