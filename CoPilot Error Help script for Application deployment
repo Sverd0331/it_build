@@ -1,27 +1,12 @@
+Last updated 3/12
+Script is now fixed
+Helper is here just for context or if script starts failing in the future
+
 <# 
-DISABLED THE ADOBE INSTALLER
-DUE TO THE NEW WAY CREATIVE CLOUD INSTALLS IT REQUIRES A SIGN IN JUST TO DOWNLOAD
-THIS PREVENTS THE SCRIPT FROM RUNNING
-WILL BE CHECKING ADOBE DOCUMENTATION TO FIND A WORK AROUND
- 
-This is the silent install script to utilize with Intune
-You can run as a powersehll script policy or package as a win32 app using the below tool
-to add to intune as a win32 app use the https://github.com/Microsoft/Microsoft-Win32-Content-Prep-Tool
-instead of adding the application you will add this as a .ps1
-the install cmd for will be 
-%SystemRoot%\SysNative\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -NoLogo -NoProfile -WindowStyle Hidden -File "%~dp0install.ps1"
+Silent build script for Intune deployment
+Removes Office, installs core apps, applies UI settings, disables Widgets fully.
 #>
- 
-<#  
-    Build Script
-    Installs:
-    - Remove ALL Office versions (ODT auto-download)
-    - Install Chrome, Slack, Teams, Office via winget
-    - Disable Task View
-    - Disable Widgets
-    - Align taskbar to the left to make it appear more like Windows 10
-#>
- 
+
 # Ensure $PSScriptRoot is populated even when run interactively
 if (-not $PSScriptRoot) {
     try {
@@ -32,63 +17,102 @@ if (-not $PSScriptRoot) {
         $PSScriptRoot = Get-Location
     }
 }
- 
+
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
- 
+
 Write-Output "===== SCRIPT STARTED ====="
- 
+
+# ----------------------------------------------------------
 # 1. Remove ALL Office versions using ODT (auto-download)
- 
+# ----------------------------------------------------------
+
 Write-Output "[1] Starting Office removal using ODT (auto-download mode)..."
- 
+
 try {
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
     $TempPath = Join-Path $env:TEMP "ODT"
     if (!(Test-Path $TempPath)) { New-Item -ItemType Directory -Path $TempPath | Out-Null }
- 
-    $ODTExe = Join-Path $TempPath "ODT.exe"
-    $SetupExe = Join-Path $TempPath "setup.exe"
+
+    $ODTExe = Join-Path $TempPath "setup.exe"
+    $SetupExe = $ODTExe
     $XMLPath = Join-Path $TempPath "uninstall.xml"
- 
-    Write-Output "[1] Downloading Office Deployment Tool..."
-    Invoke-WebRequest -Uri "https://download.microsoft.com/download/2/7/0/270F0C1F-1E8F-4C1C-9A8C-0A6B0E0C8F0A/officedeploymenttool_16426-20258.exe%22 -OutFile $ODTExe
- 
-    Write-Output "[1] Extracting ODT..."
-    Start-Process -FilePath $ODTExe -ArgumentList "/quiet /extract:`"$TempPath`"" -Wait
- 
+    $url = "https://officecdn.microsoft.com/pr/wsus/setup.exe"
+
+    Write-Output "[1] Downloading Office Deployment Tool with progress..."
+
+    if (Test-Path $ODTExe) { Remove-Item $ODTExe -Force }
+
+    $fileStream = [System.IO.File]::Create($ODTExe)
+    $fileStream.Close()
+
+    $request = [System.Net.HttpWebRequest]::Create($url)
+    $request.Method = "GET"
+    $response = $request.GetResponse()
+    $totalBytes = $response.ContentLength
+    $stream = $response.GetResponseStream()
+
+    Write-Output "[1] Total download size: $([math]::Round($totalBytes/1MB,2)) MB"
+
+    $buffer = New-Object byte[] 65536
+    $bytesRead = 0
+    $totalRead = 0
+
+    $fileStream = New-Object System.IO.FileStream($ODTExe, [System.IO.FileMode]::Append)
+
+    while (($bytesRead = $stream.Read($buffer, 0, $buffer.Length)) -gt 0) {
+        $fileStream.Write($buffer, 0, $bytesRead)
+        $totalRead += $bytesRead
+
+        $percent = [math]::Round(($totalRead / $totalBytes) * 100, 2)
+        Write-Progress -Activity "Downloading ODT" -Status "$percent% complete" -PercentComplete $percent
+    }
+
+    $fileStream.Close()
+    $stream.Close()
+    $response.Close()
+
+    Write-Output "[1] Download completed successfully."
+
     Write-Output "[1] Creating uninstall.xml..."
 @"
 <Configuration>
-<Remove All="TRUE" />
-<Display Level="None" AcceptEULA="TRUE" />
+  <Remove All="TRUE" />
+  <Display Level="None" AcceptEULA="TRUE" />
 </Configuration>
 "@ | Out-File -FilePath $XMLPath -Encoding UTF8 -Force
- 
-    if (Test-Path $SetupExe) {
-        Write-Output "[1] Running Office removal..."
-        Start-Process -FilePath $SetupExe -ArgumentList "/configure `"$XMLPath`"" -Wait
-        Write-Output "[1] Office removal completed."
+
+    Write-Output "[1] Running Office removal..."
+
+    $proc = Start-Process -FilePath $SetupExe -ArgumentList "/configure `"$XMLPath`"" -PassThru
+    $start = Get-Date
+
+    while ($proc -and -not $proc.HasExited) {
+        $elapsed = (Get-Date) - $start
+        Write-Output "[1] Office removal still running... Elapsed time: $($elapsed.ToString("mm\:ss"))"
+        Start-Sleep -Seconds 30
+        $proc.Refresh()
     }
-    else {
-        Write-Warning "[1] setup.exe not found after extraction."
-    }
+
+    Write-Output "[1] Office removal completed."
 }
 catch {
     Write-Warning "[1] Office removal failed: $($_.Exception.Message)"
 }
- 
-<#  
-2. Install apps via winget  
-#>
- 
+
+# ----------------------------------------------------------
+# 2. Install apps via winget
+# ----------------------------------------------------------
+
 Write-Output "[2] Starting winget application installs..."
- 
+
 $apps = @(
     "Google.Chrome",
     "Microsoft.Teams",
     "Microsoft.Office"
 )
- 
+
 foreach ($app in $apps) {
     Write-Output "[2] Installing: $app"
     try {
@@ -99,26 +123,34 @@ foreach ($app in $apps) {
         Write-Warning "[2] Failed to install $app : $($_.Exception.Message)"
     }
 }
- 
-<#  
-3. Slack — install ONLY if a user is logged in  
-#>
- 
+
+# ----------------------------------------------------------
+# 3. Slack — install once per user if missing
+# ----------------------------------------------------------
+
 Write-Output "[3] Checking for logged-in user for Slack install..."
- 
+
 try {
     $User = (Get-CimInstance Win32_ComputerSystem).UserName
- 
+
     if ($User) {
         Write-Output "[3] Logged-in user detected: $User"
-        Write-Output "[3] Installing Slack for the signed-in user..."
- 
-        try {
-            winget install -e --id SlackTechnologies.Slack --source winget --accept-source-agreements --accept-package-agreements
-            Write-Output "[3] Slack installed for user: $User"
+
+        $SlackPath = "C:\Users\$($User.Split('\')[-1])\AppData\Local\slack\slack.exe"
+
+        if (Test-Path $SlackPath) {
+            Write-Output "[3] Slack already installed for this user. Skipping."
         }
-        catch {
-            Write-Warning "[3] Slack install failed: $($_.Exception.Message)"
+        else {
+            Write-Output "[3] Slack not found. Installing Slack for the signed-in user..."
+
+            try {
+                winget install -e --id SlackTechnologies.Slack --source winget --accept-source-agreements --accept-package-agreements
+                Write-Output "[3] Slack installed for user: $User"
+            }
+            catch {
+                Write-Warning "[3] Slack install failed: $($_.Exception.Message)"
+            }
         }
     }
     else {
@@ -128,19 +160,19 @@ try {
 catch {
     Write-Warning "[3] Slack detection failed: $($_.Exception.Message)"
 }
- 
-<#  
-4. Taskbar & UI Tweaks (Intune-safe HKCU handling)
-#>
- 
+
+# ----------------------------------------------------------
+# 4. Taskbar & UI Tweaks (including FIXED Widgets removal)
+# ----------------------------------------------------------
+
 Write-Output "[4] Applying taskbar and UI registry settings..."
- 
+
 try {
     $User = (Get-CimInstance Win32_ComputerSystem).UserName
- 
+
     if ($User) {
         Write-Output "[4] Logged-in user detected: $User"
- 
+
         try {
             $SID = (New-Object System.Security.Principal.NTAccount($User)).Translate([System.Security.Principal.SecurityIdentifier]).Value
             Write-Output "[4] User SID resolved: $SID"
@@ -149,43 +181,46 @@ try {
             Write-Warning "[4] Failed to resolve SID for $User : $($_.Exception.Message)"
             $SID = $null
         }
- 
+
         if ($SID) {
             $UserHive = "Registry::HKEY_USERS\$SID\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
- 
+
             Write-Output "[4] Writing registry values to: $UserHive"
- 
+
+            # Disable Task View
+            New-ItemProperty -Path $UserHive -Name "ShowTaskViewButton" -Value 0 -PropertyType DWord -Force | Out-Null
+            Write-Output "[4] Disabled Task View"
+
+            # FULL Widgets disable (policy + app removal + HKCU)
+            Write-Output "[4] Disabling Widgets (full method)..."
+
+            # 1. Policy
+            New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Dsh" -Force | Out-Null
+            New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Dsh" -Name "AllowNewsAndInterests" -Value 0 -PropertyType DWord -Force | Out-Null
+            New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Dsh" -Name "AllowWidgets" -Value 0 -PropertyType DWord -Force | Out-Null
+            Write-Output "[4] Widgets disabled via policy."
+
+            # 2. Remove Web Experience Pack
             try {
-                New-ItemProperty -Path $UserHive -Name "ShowTaskViewButton" -Value 0 -PropertyType DWord -Force | Out-Null
-                Write-Output "[4] Disabled Task View"
+                Get-AppxPackage -AllUsers *WebExperience* | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue
+                Get-AppxProvisionedPackage -Online | Where-Object {$_.DisplayName -like "*WebExperience*"} | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
+                Write-Output "[4] Web Experience Pack removed."
             }
             catch {
-                Write-Warning "[4] Failed to disable Task View: $($_.Exception.Message)"
+                Write-Warning "[4] Failed to remove Web Experience Pack: $($_.Exception.Message)"
             }
- 
-            try {
-                New-ItemProperty -Path $UserHive -Name "TaskbarDa" -Value 0 -PropertyType DWord -Force | Out-Null
-                Write-Output "[4] Disabled Widgets"
-            }
-            catch {
-                Write-Warning "[4] Failed to disable Widgets: $($_.Exception.Message)"
-            }
- 
-            try {
-                New-ItemProperty -Path $UserHive -Name "TaskbarAl" -Value 0 -PropertyType DWord -Force | Out-Null
-                Write-Output "[4] Taskbar aligned to the left"
-            }
-            catch {
-                Write-Warning "[4] Failed to align taskbar: $($_.Exception.Message)"
-            }
- 
-            try {
-                Get-Process -Name explorer -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-                Write-Output "[4] Restarted Explorer"
-            }
-            catch {
-                Write-Warning "[4] Failed to restart Explorer: $($_.Exception.Message)"
-            }
+
+            # 3. HKCU toggle
+            New-ItemProperty -Path $UserHive -Name "TaskbarDa" -Value 0 -PropertyType DWord -Force | Out-Null
+            Write-Output "[4] Taskbar Widgets button disabled."
+
+            # Align taskbar left
+            New-ItemProperty -Path $UserHive -Name "TaskbarAl" -Value 0 -PropertyType DWord -Force | Out-Null
+            Write-Output "[4] Taskbar aligned to the left"
+
+            # Restart Explorer
+            Get-Process -Name explorer -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+            Write-Output "[4] Restarted Explorer"
         }
     }
     else {
@@ -195,5 +230,5 @@ try {
 catch {
     Write-Warning "[4] Unexpected error in registry section: $($_.Exception.Message)"
 }
- 
+
 Write-Output "===== SCRIPT COMPLETED ====="
