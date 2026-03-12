@@ -1,5 +1,8 @@
 <#
-
+DISABLED THE ADOBE INSTALLER
+DUE TO THE NEW WAY CREATIVE CLOUD INSTALLS IT REQUIRES A SIGN IN JUST TO DOWNLOAD
+THIS PREVENTS THE SCRIPT FROM RUNNING
+WILL BE CHECKING ADOBE DOCUMENTATION TO FIND A WORK AROUND
 This is the silent install script to utilize with Intune
 You can run as a powersehll script policy or package as a win32 app using the below tool
 to add to intune as a win32 app use the https://github.com/Microsoft/Microsoft-Win32-Content-Prep-Tool
@@ -51,7 +54,7 @@ foreach ($app in $apps) {
 <#  
 3. Install Adobe Creative Cloud from URL  
 More installers can be added as needed. Just need to replace everything as it relates to Adobe and replace with _____  
-#>
+
 
 $tempZip = "$env:TEMP\ACCC.zip"
 $extractPath = "$env:TEMP\ACCC"
@@ -65,7 +68,7 @@ $installer = Get-ChildItem -Path $extractPath -Recurse -Filter "*.exe" | Select-
 if ($installer) {
     Start-Process $installer.FullName -ArgumentList "--silent" -Wait -WindowStyle Hidden
 }
-
+#>
 # 4. Disable Task View
 
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" `
