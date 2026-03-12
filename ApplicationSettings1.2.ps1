@@ -1,11 +1,13 @@
 <# 
 V1.2
 tested 3/12/26
-    CURRENT BUGS:
-    DISABLED THE ADOBE INSTALLER
-    DUE TO THE NEW WAY CREATIVE CLOUD INSTALLS IT REQUIRES A SIGN IN JUST TO DOWNLOAD
-    THIS PREVENTS THE SCRIPT FROM RUNNING
-    WILL BE CHECKING ADOBE DOCUMENTATION TO FIND A WORK AROUND
+    Adobe changes
+    -Now needs to be packaged from the adobe admin console
+    -Reason is adobe create cloud is adobes authentication broker
+    -in https://adminconsole.adobe.com/
+    -packages
+    -create package
+    -select creative cloud and adobe
     
     Changes made:
     Updated the URL for Microsoft uninstaller 
