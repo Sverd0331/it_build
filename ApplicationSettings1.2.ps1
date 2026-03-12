@@ -25,7 +25,6 @@ the install cmd for will be
 %SystemRoot%\SysNative\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -NoLogo -NoProfile -WindowStyle Hidden -File "%~dp0install.ps1"
 #>
 
-t
 
 # Ensure $PSScriptRoot is populated
 if (-not $PSScriptRoot) {
