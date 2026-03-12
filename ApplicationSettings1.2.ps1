@@ -1,5 +1,5 @@
 <# 
-V1.2
+V1.3
 tested 3/12/26
     Adobe changes
     -Now needs to be packaged from the adobe admin console
@@ -8,8 +8,11 @@ tested 3/12/26
     -packages
     -create package
     -select creative cloud and adobe
+
+    1.3 Changes made:
+    Added battery settings
     
-    Changes made:
+    1.2 Changes made:
     Updated the URL for Microsoft uninstaller 
     This was failing due to microsoft changing the URL
 
@@ -37,9 +40,9 @@ if (-not $PSScriptRoot) {
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 
-
 # Office Removal (ODT Download)
 
+Start-Sleep -Seconds 2
 
 try {
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -78,13 +81,15 @@ try {
 </Configuration>
 "@ | Out-File -FilePath $XMLPath -Encoding UTF8 -Force
 
+    Start-Sleep -Seconds 2
     Start-Process -FilePath $ODTExe -ArgumentList "/configure `"$XMLPath`"" -Wait
+    Start-Sleep -Seconds 2
 }
 catch { }
 
-
 # Winget Installs
 
+Start-Sleep -Seconds 2
 
 $apps = @(
     "Google.Chrome",
@@ -95,13 +100,14 @@ $apps = @(
 foreach ($app in $apps) {
     try {
         winget install -e --id $app --source winget --accept-source-agreements --accept-package-agreements | Out-Null 2>&1
+        Start-Sleep -Seconds 2
     }
     catch { }
 }
 
-
 # Slack (once per user)
 
+Start-Sleep -Seconds 2
 
 try {
     $User = (Get-CimInstance Win32_ComputerSystem).UserName
@@ -112,6 +118,7 @@ try {
         if (!(Test-Path $SlackPath)) {
             try {
                 winget install -e --id SlackTechnologies.Slack --source winget --accept-source-agreements --accept-package-agreements | Out-Null 2>&1
+                Start-Sleep -Seconds 2
             }
             catch { }
         }
@@ -120,8 +127,38 @@ try {
 catch { }
 
 
+# Power Settings added with V1.3
+
+Start-Sleep -Seconds 2
+
+# Lid behavior
+powercfg /setACvalueIndex scheme_current sub_buttons lidAction 0
+Start-Sleep -Seconds 2
+
+powercfg /setDCvalueIndex scheme_current sub_buttons lidAction 1
+Start-Sleep -Seconds 2
+
+# Display timeout
+powercfg /CHANGE monitor-timeout-ac 60   # Plugged in: 1 hour
+Start-Sleep -Seconds 2
+
+powercfg /CHANGE monitor-timeout-dc 20   # On battery: 20 minutes
+Start-Sleep -Seconds 2
+
+# Sleep timeout
+powercfg /CHANGE standby-timeout-ac 0    # Plugged in: Never
+Start-Sleep -Seconds 2
+
+powercfg /CHANGE standby-timeout-dc 30   # On battery: 30 minutes
+Start-Sleep -Seconds 2
+
+# Apply scheme
+powercfg /SETACTIVE SCHEME_CURRENT
+Start-Sleep -Seconds 2
+
 # Taskbar + Widgets Disable
 
+Start-Sleep -Seconds 2
 
 try {
     $User = (Get-CimInstance Win32_ComputerSystem).UserName
@@ -131,29 +168,37 @@ try {
 
         # Task View
         New-ItemProperty -Path $UserHive -Name "ShowTaskViewButton" -Value 0 -PropertyType DWord -Force | Out-Null
+        Start-Sleep -Seconds 1
 
         # Widgets (policy)
         New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Dsh" -Force | Out-Null
         New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Dsh" -Name "AllowNewsAndInterests" -Value 0 -PropertyType DWord -Force | Out-Null
         New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Dsh" -Name "AllowWidgets" -Value 0 -PropertyType DWord -Force | Out-Null
+        Start-Sleep -Seconds 1
 
         # Widgets (remove app)
         Get-AppxPackage -AllUsers *WebExperience* | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 2
+
         Get-AppxProvisionedPackage -Online | Where-Object {$_.DisplayName -like "*WebExperience*"} | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 2
 
         # Widgets (HKCU toggle)
         New-ItemProperty -Path $UserHive -Name "TaskbarDa" -Value 0 -PropertyType DWord -Force | Out-Null
+        Start-Sleep -Seconds 1
 
         # Taskbar alignment
         New-ItemProperty -Path $UserHive -Name "TaskbarAl" -Value 0 -PropertyType DWord -Force | Out-Null
+        Start-Sleep -Seconds 1
 
         # Restart Explorer
         Get-Process -Name explorer -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 2
     }
 }
 catch { }
 
-
 # End
 
 exit 0
+
