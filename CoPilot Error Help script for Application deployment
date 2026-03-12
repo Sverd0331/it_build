@@ -1,0 +1,154 @@
+#Used Copilot to add Verbose Error Handling
+
+<# 
+DISABLED THE ADOBE INSTALLER
+DUE TO THE NEW WAY CREATIVE CLOUD INSTALLS IT REQUIRES A SIGN IN JUST TO DOWNLOAD
+THIS PREVENTS THE SCRIPT FROM RUNNING
+WILL BE CHECKING ADOBE DOCUMENTATION TO FIND A WORK AROUND
+
+This is the silent install script to utilize with Intune
+You can run as a powersehll script policy or package as a win32 app using the below tool
+to add to intune as a win32 app use the https://github.com/Microsoft/Microsoft-Win32-Content-Prep-Tool
+instead of adding the application you will add this as a .ps1
+the install cmd for will be 
+%SystemRoot%\SysNative\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -NoLogo -NoProfile -WindowStyle Hidden -File "%~dp0install.ps1"
+#>
+
+<#  
+    Build Script
+    Installs:
+    - Remove Baked Microsoft 365
+    - Install Chrome, Slack, Teams, Office via winget
+    - Disable Task View
+    - Disable Widgets
+    - Align taskbar to the left to make it appear more like Windows 10
+#>
+
+$ErrorActionPreference = "Stop"
+$ProgressPreference = "SilentlyContinue"
+
+Write-Output "===== SCRIPT STARTED ====="
+
+# 1. Remove Microsoft 365 (Click-to-Run)
+
+Write-Output "[1] Checking for Microsoft 365 installations..."
+
+try {
+    $officeProducts = Get-WmiObject -Query "SELECT * FROM Win32_Product WHERE Name LIKE '%Microsoft 365%'" -ErrorAction SilentlyContinue
+
+    if ($officeProducts) {
+        Write-Output "[1] Microsoft 365 found. Attempting uninstall..."
+        foreach ($product in $officeProducts) {
+            try {
+                $product.Uninstall() | Out-Null 2>&1
+                Write-Output "[1] Uninstalled: $($product.Name)"
+            }
+            catch {
+                Write-Warning "[1] Failed to uninstall $($product.Name): $($_.Exception.Message)"
+            }
+        }
+    }
+    else {
+        Write-Output "[1] No Microsoft 365 installations detected."
+    }
+}
+catch {
+    Write-Warning "[1] Error while checking for Microsoft 365: $($_.Exception.Message)"
+}
+
+<#  
+2. Install apps via winget  
+#>
+
+Write-Output "[2] Starting winget application installs..."
+
+$apps = @(
+    "Google.Chrome",
+    "SlackTechnologies.Slack",
+    "Microsoft.Teams",
+    "Microsoft.Office"
+)
+
+foreach ($app in $apps) {
+    Write-Output "[2] Installing: $app"
+    try {
+        winget install -e --id $app --accept-source-agreements --accept-package-agreements | Out-Null 2>&1
+        Write-Output "[2] Successfully installed: $app"
+    }
+    catch {
+        Write-Warning "[2] Failed to install $app : $($_.Exception.Message)"
+    }
+}
+
+<#  
+3. Adobe Creative Cloud installer disabled  
+#>
+
+Write-Output "[3] Adobe Creative Cloud install skipped (disabled)."
+
+# 4–6. Taskbar & UI Tweaks (Intune‑safe HKCU handling)
+
+Write-Output "[4] Applying taskbar and UI registry settings..."
+
+try {
+    $User = (Get-CimInstance Win32_ComputerSystem).UserName
+
+    if ($User) {
+        Write-Output "[4] Logged-in user detected: $User"
+
+        try {
+            $SID = (New-Object System.Security.Principal.NTAccount($User)).Translate([System.Security.Principal.SecurityIdentifier]).Value
+            Write-Output "[4] User SID resolved: $SID"
+        }
+        catch {
+            Write-Warning "[4] Failed to resolve SID for $User : $($_.Exception.Message)"
+            $SID = $null
+        }
+
+        if ($SID) {
+            $UserHive = "Registry::HKEY_USERS\$SID\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+
+            Write-Output "[4] Writing registry values to: $UserHive"
+
+            try {
+                New-ItemProperty -Path $UserHive -Name "ShowTaskViewButton" -Value 0 -PropertyType DWord -Force | Out-Null
+                Write-Output "[4] Disabled Task View"
+            }
+            catch {
+                Write-Warning "[4] Failed to disable Task View: $($_.Exception.Message)"
+            }
+
+            try {
+                New-ItemProperty -Path $UserHive -Name "TaskbarDa" -Value 0 -PropertyType DWord -Force | Out-Null
+                Write-Output "[4] Disabled Widgets"
+            }
+            catch {
+                Write-Warning "[4] Failed to disable Widgets: $($_.Exception.Message)"
+            }
+
+            try {
+                New-ItemProperty -Path $UserHive -Name "TaskbarAl" -Value 0 -PropertyType DWord -Force | Out-Null
+                Write-Output "[4] Taskbar aligned to the left"
+            }
+            catch {
+                Write-Warning "[4] Failed to align taskbar: $($_.Exception.Message)"
+            }
+
+            try {
+                Get-Process -Name explorer -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+                Write-Output "[4] Restarted Explorer"
+            }
+            catch {
+                Write-Warning "[4] Failed to restart Explorer: $($_.Exception.Message)"
+            }
+        }
+    }
+    else {
+        Write-Warning "[4] No logged-in user detected. Registry settings skipped."
+    }
+}
+catch {
+    Write-Warning "[4] Unexpected error in registry section: $($_.Exception.Message)"
+}
+
+Write-Output "===== SCRIPT COMPLETED ====="
