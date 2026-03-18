@@ -1,0 +1,4 @@
+The winget in the helm documentation is outdated
+This one is as of 2/7/26
+
+winget install -e --id Helm.Helm
