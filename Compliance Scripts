@@ -1,3 +1,7 @@
+Used for reporting on 3/18
+will move to .ps1 when time permits
+
+
 DLP Classification export 
 
 Get-AzPurviewClassificationRule | Export-Csv "DLP-Classifications.csv"
@@ -16,3 +20,42 @@ Privleged Identity Audit
 Connect-MgGraph -Scopes "RoleManagement.Read.Directory"
 Get-MgRoleManagementDirectoryRoleAssignmentScheduleInstance |
     Select-Object PrincipalId, RoleDefinitionId, AssignmentType, StartDateTime, EndDateTime
+
+
+MFA disapled accounts
+Connect-MgGraph -Scopes "User.Read.All"
+
+Get-MgUser -All |
+    Where-Object { $_.StrongAuthenticationMethods.Count -eq 0 } |
+    Select DisplayName, UserPrincipalName
+
+
+Users not signed in for 90 days
+
+Connect-MgGraph -Scopes "AuditLog.Read.All","Application.Read.All"
+
+$cutoff = (Get-Date).AddDays(-90)
+
+Get-MgServicePrincipal -All |
+    ForEach-Object {
+        $signins = Get-MgAuditLogSignIn -Filter "appId eq '$($_.AppId)'" -Top 1
+        if ($signins.CreatedDateTime -lt $cutoff) { $_ }
+    } |
+    Select DisplayName, AppId
+
+
+Ownerless groups
+Connect-MgGraph -Scopes "Group.Read.All"
+
+Get-MgGroup -All -Filter "securityEnabled eq true" |
+    Where-Object {
+        (Get-MgGroupOwner -GroupId $_.Id -ErrorAction SilentlyContinue).Count -eq 0
+    } |
+    Select DisplayName, Id
+
+Accounts with passwords that never expire
+
+Connect-MgGraph -Scopes "User.Read.All"
+
+Get-MgUser -All -Filter "passwordPolicies eq 'DisablePasswordExpiration'" |
+    Select DisplayName, UserPrincipalName
