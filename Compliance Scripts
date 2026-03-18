@@ -1,0 +1,18 @@
+DLP Classification export 
+
+Get-AzPurviewClassificationRule | Export-Csv "DLP-Classifications.csv"
+
+Global Admin Audit
+
+Connect-MgGraph -Scopes "Directory.Read.All","RoleManagement.Read.Directory"
+Get-MgDirectoryRole | ForEach-Object {
+    Get-MgDirectoryRoleMember -DirectoryRoleId $_.Id |
+    Select-Object @{n="Role";e={$_.AdditionalProperties.roleTemplateId}}, Id, DisplayName
+}
+
+
+Privleged Identity Audit
+
+Connect-MgGraph -Scopes "RoleManagement.Read.Directory"
+Get-MgRoleManagementDirectoryRoleAssignmentScheduleInstance |
+    Select-Object PrincipalId, RoleDefinitionId, AssignmentType, StartDateTime, EndDateTime
