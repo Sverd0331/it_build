@@ -1,6 +1,7 @@
 <#
+.SYNOPSIS
 Latency check
-Useful for VPN troubleshooting
+Pings 8.8.8.8 with timestamp
 WiFi troubleshooting 
 #>
 
