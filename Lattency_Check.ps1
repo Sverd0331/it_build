@@ -1,6 +1,7 @@
 <#
 .SYNOPSIS
 Latency check
+.Description
 Pings 8.8.8.8 with timestamp
 WiFi troubleshooting 
 #>
