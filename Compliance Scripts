@@ -55,9 +55,3 @@ Get-MgGroup -All -Filter "securityEnabled eq true" |
     } |
     Select DisplayName, Id
 
-Accounts with passwords that never expire
-
-Connect-MgGraph -Scopes "User.Read.All"
-
-Get-MgUser -All -Filter "passwordPolicies eq 'DisablePasswordExpiration'" |
-    Select DisplayName, UserPrincipalName
