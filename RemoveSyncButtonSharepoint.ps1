@@ -1,5 +1,7 @@
 <#
+.SYNOPSIS
 Goes through the entire sharepoint tenant and removes the sync button
+.DESCRIPTION
 This will make it so users can only use the add shortcut to onedrive option
 This is a more efficent option since it carries the sync'd folders over to devices
 and new machines
