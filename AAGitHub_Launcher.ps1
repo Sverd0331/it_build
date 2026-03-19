@@ -23,7 +23,23 @@ function Get-ScriptSynopsis {
 
         # Multi-line .SYNOPSIS extraction
         if ($text -match '(?s)\.SYNOPSIS\s*(.+?)(?=\.\w+|#>)') {
-            # Collapse line breaks into a readable sentence
+            return ($matches[1].Trim() -replace '\s+', ' ')
+        }
+    }
+    catch {}
+
+    return "No synopsis found"
+}
+
+function Get-ScriptDescription {
+    param([string]$RawUrl)
+
+    try {
+        $content = Invoke-WebRequest -Uri $RawUrl -UseBasicParsing
+        $text = $content.Content
+
+        # Multi-line .DESCRIPTION extraction
+        if ($text -match '(?s)\.DESCRIPTION\s*(.+?)(?=\.\w+|#>)') {
             return ($matches[1].Trim() -replace '\s+', ' ')
         }
     }
@@ -39,13 +55,15 @@ $files = Invoke-RestMethod -Uri $apiUrl -Headers @{ "User-Agent" = "PowerShell" 
 # Filter for PowerShell scripts
 $psScripts = $files | Where-Object { $_.name -like "*.ps1" }
 
-# Build table
+# Build table with Name, Synopsis, Description
 $scriptList = foreach ($file in $psScripts) {
-    $synopsis = Get-ScriptSynopsis $file.download_url
+    $synopsis    = Get-ScriptSynopsis $file.download_url
+    $description = Get-ScriptDescription $file.download_url
 
     [PSCustomObject]@{
         Name        = $file.name
         Synopsis    = $synopsis
+        Description = $description
         Path        = $file.path
         Url         = $file.download_url
     }
