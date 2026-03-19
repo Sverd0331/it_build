@@ -32,19 +32,6 @@ Get-MgUser -All |
     Select DisplayName, UserPrincipalName
 
 
-Users not signed in for 90 days
-
-Connect-MgGraph -Scopes "AuditLog.Read.All","Application.Read.All"
-
-$cutoff = (Get-Date).AddDays(-90)
-
-Get-MgServicePrincipal -All |
-    ForEach-Object {
-        $signins = Get-MgAuditLogSignIn -Filter "appId eq '$($_.AppId)'" -Top 1
-        if ($signins.CreatedDateTime -lt $cutoff) { $_ }
-    } |
-    Select DisplayName, AppId
-
 
 Ownerless groups
 Connect-MgGraph -Scopes "Group.Read.All"
