@@ -24,21 +24,3 @@ Get-MgRoleManagementDirectoryRoleAssignmentScheduleInstance |
     Select-Object PrincipalId, RoleDefinitionId, AssignmentType, StartDateTime, EndDateTime
 
 
-MFA disapled accounts
-Connect-MgGraph -Scopes "User.Read.All"
-
-Get-MgUser -All |
-    Where-Object { $_.StrongAuthenticationMethods.Count -eq 0 } |
-    Select DisplayName, UserPrincipalName
-
-
-
-Ownerless groups
-Connect-MgGraph -Scopes "Group.Read.All"
-
-Get-MgGroup -All -Filter "securityEnabled eq true" |
-    Where-Object {
-        (Get-MgGroupOwner -GroupId $_.Id -ErrorAction SilentlyContinue).Count -eq 0
-    } |
-    Select DisplayName, Id
-
