@@ -70,5 +70,3 @@ Invoke-WebRequest -Uri $selection.Url -OutFile $tempPath
 Unblock-File -Path $tempPath
 
 & $tempPath
-Write-Host "Running $($selection.Name) from GitHub..."
-& $tempPath
