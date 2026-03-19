@@ -21,7 +21,6 @@ function Get-ScriptSynopsis {
         $content = Invoke-WebRequest -Uri $RawUrl -UseBasicParsing
         $text = $content.Content
 
-        # Multi-line .SYNOPSIS extraction
         if ($text -match '(?s)\.SYNOPSIS\s*(.+?)(?=\.\w+|#>)') {
             return ($matches[1].Trim() -replace '\s+', ' ')
         }
@@ -38,7 +37,6 @@ function Get-ScriptDescription {
         $content = Invoke-WebRequest -Uri $RawUrl -UseBasicParsing
         $text = $content.Content
 
-        # Multi-line .DESCRIPTION extraction
         if ($text -match '(?s)\.DESCRIPTION\s*(.+?)(?=\.\w+|#>)') {
             return ($matches[1].Trim() -replace '\s+', ' ')
         }
@@ -48,38 +46,29 @@ function Get-ScriptDescription {
     return "No description found"
 }
 
-# Pull file list from GitHub
 $apiUrl = "https://api.github.com/repos/$RepoOwner/$RepoName/contents?ref=$Branch"
 $files = Invoke-RestMethod -Uri $apiUrl -Headers @{ "User-Agent" = "PowerShell" }
 
-# Filter for PowerShell scripts
 $psScripts = $files | Where-Object { $_.name -like "*.ps1" }
 
-# Build table with Name, Synopsis, Description
 $scriptList = foreach ($file in $psScripts) {
-    $synopsis    = Get-ScriptSynopsis $file.download_url
-    $description = Get-ScriptDescription $file.download_url
-
     [PSCustomObject]@{
         Name        = $file.name
-        Synopsis    = $synopsis
-        Description = $description
+        Synopsis    = Get-ScriptSynopsis $file.download_url
+        Description = Get-ScriptDescription $file.download_url
         Path        = $file.path
         Url         = $file.download_url
     }
 }
 
-# Display in Out-GridView
 $selection = $scriptList | Out-GridView -Title "Select a script to run" -PassThru
+if (-not $selection) { exit }
 
-if (-not $selection) {
-    Write-Host "No script selected."
-    exit
-}
-
-# Download and run selected script
 $tempPath = Join-Path $env:TEMP $selection.Name
 Invoke-WebRequest -Uri $selection.Url -OutFile $tempPath
 
+Unblock-File -Path $tempPath
+
+& $tempPath
 Write-Host "Running $($selection.Name) from GitHub..."
 & $tempPath
