@@ -1,6 +1,7 @@
 <#
-In the BETA TEST PHASE
+.SYNOPSIS
 This will connect to my Github
+.DESCRIPTION
 It pulls up a UI where you can select the scripts to run
 This will allow you to run most scripts without referencing github
 This may not work for ALL scripts. I will be going through them and adding the modules they need to verify dependencies come with the script
