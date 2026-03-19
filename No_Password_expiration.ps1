@@ -7,12 +7,6 @@ This will create a report and put it on the desktop in a time stamped folder
 
 #>
 
-if ($PSVersionTable.PSVersion.Major -lt 7) {
-    $pwsh = "C:\Program Files\PowerShell\7\pwsh.exe"
-    & $pwsh -File $PSCommandPath
-    exit
-}
-
 $nuget = Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue
 if (-not $nuget) {
     Install-PackageProvider -Name NuGet -Force -Scope AllUsers -ErrorAction Stop
