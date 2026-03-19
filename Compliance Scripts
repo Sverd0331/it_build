@@ -1,5 +1,7 @@
-Used for reporting on 3/18
-will move to .ps1 when time permits
+These are all now a work in progress to be utilized with the Launcher
+Some require Powershell 7
+Also need to create dependency install/ imports
+As they move to the main Tree I will remove them from here
 
 
 DLP Classification export 
