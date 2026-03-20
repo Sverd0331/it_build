@@ -2,6 +2,9 @@
 .SYNOPSIS
 This will connect to my Github
 .DESCRIPTION
+WORKING ON WHILE LOOP Some of the WIFI specific scripts are set to close powershell
+Will be updating those scripts as I use them to be able to keep the window open
+
 It pulls up a UI where you can select the scripts to run
 This will allow you to run most scripts without referencing github
 This may not work for ALL scripts. I will be going through them and adding the modules they need to verify dependencies come with the script
