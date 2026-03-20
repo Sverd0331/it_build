@@ -1,5 +1,9 @@
 <#
+.SYNOPSIS
 Pulls the conditional access policies from the tenant
+
+
+.DESCRIPTION
 Creates a folder on the Desktop
 Files are JSON files
 Open with Visual Studio code to read
