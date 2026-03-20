@@ -1,4 +1,9 @@
 <#
+.SYNOPSIS
+Exports devices into Compliant and non Compliant folders
+
+.DESCRIPTION
+
 Exports all devices from intune
 two seperate files
 one complient

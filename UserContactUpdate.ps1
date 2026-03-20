@@ -1,4 +1,9 @@
 <#
+.SYNOPSIS
+User contact Info Updater
+
+.DESCRIPTION
+
 Update users contacts infromation in Entra
 Run as Admin if you need to install modules
 If will ask you the users email

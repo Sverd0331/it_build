@@ -1,4 +1,8 @@
 <# 
+.SYNOPSIS
+Gives sames group permissions as another user
+
+.Description
 this script connects to the tenant via microsoft graph
 it then asks the source user by email
 then asks for user you will be copying groups to

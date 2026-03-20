@@ -1,4 +1,8 @@
 <# 
+.SYNOPSIS
+Build Script Verify this meets your needs
+
+.DESCRIPTION
 V1.3
 tested 3/12/26
     Adobe changes

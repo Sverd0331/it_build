@@ -1,5 +1,9 @@
 <#
+.SYNOPSIS
     Wi-Fi signal & roaming monitor
+
+
+.DESCRIPTION    
     Perfect for checking drops in an AP while roaming office
 
     Monitors the active Wi-Fi interface, logging:

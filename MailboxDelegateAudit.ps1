@@ -1,4 +1,8 @@
 <#
+.SYNOPSIS
+Verify all users access to all mailboxes
+
+.DESCRIPTION
 V1
 Run as admin to confirm modules are installed
 Audit all mailbox-level and folder-level permissions for a specified delegate.

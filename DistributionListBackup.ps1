@@ -1,4 +1,8 @@
 <#
+.SYNOPSIS
+Creates CSV of all DL's
+
+.DESCRIPTION
 Run this as admin to import modules as needed
 Useful to use prior to any automatic deletion scripts
 Pulls the list and members of list

@@ -1,4 +1,8 @@
 <#
+.SYNOPSIS
+Verifies all user calendars a user has access to
+
+.DESCRIPTION
 This script runs cleanly in Powershell 7
 It connectes to exchange
 Asks the user you want to check
