@@ -55,7 +55,6 @@ $scriptList = foreach ($file in $psScripts) {
     [PSCustomObject]@{
         Name        = $file.name
         Synopsis    = Get-ScriptSynopsis $file.download_url
-        Description = Get-ScriptDescription $file.download_url
         Path        = $file.path
         Url         = $file.download_url
     }
