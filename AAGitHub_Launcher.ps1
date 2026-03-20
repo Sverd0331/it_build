@@ -28,23 +28,6 @@ function Get-ScriptSynopsis {
     catch {}
 
     return "No synopsis found"
-}
-
-function Get-ScriptDescription {
-    param([string]$RawUrl)
-
-    try {
-        $content = Invoke-WebRequest -Uri $RawUrl -UseBasicParsing
-        $text = $content.Content
-
-        if ($text -match '(?s)\.DESCRIPTION\s*(.+?)(?=\.\w+|#>)') {
-            return ($matches[1].Trim() -replace '\s+', ' ')
-        }
-    }
-    catch {}
-
-    return "No description found"
-}
 
 $apiUrl = "https://api.github.com/repos/$RepoOwner/$RepoName/contents?ref=$Branch"
 $files = Invoke-RestMethod -Uri $apiUrl -Headers @{ "User-Agent" = "PowerShell" }
