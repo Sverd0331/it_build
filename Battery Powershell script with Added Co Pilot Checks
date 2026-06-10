@@ -1,0 +1,72 @@
+# -----------------------------
+# APPLY POWER SETTINGS
+# -----------------------------
+
+# Lid close behaviour while plugged in (0 = Do Nothing)
+powercfg /SetACValueIndex scheme_current sub_buttons lidAction 0
+
+# Lid close behaviour on battery (1 = Sleep)
+powercfg /SetDCValueIndex scheme_current sub_buttons lidAction 1
+
+# Display sleep timeout on battery (minutes)
+powercfg /CHANGE monitor-timeout-dc 5
+
+# Display sleep timeout while plugged in (minutes)
+powercfg /CHANGE monitor-timeout-ac 10
+
+# System sleep timeout on battery (minutes)
+powercfg /CHANGE standby-timeout-dc 20
+
+# System sleep timeout while plugged in (0 = never)
+powercfg /CHANGE standby-timeout-ac 0
+
+# Apply scheme to ensure changes take effect
+powercfg /SETACTIVE scheme_current
+
+
+# -----------------------------
+# VALIDATION SECTION
+# -----------------------------
+
+Write-Output "Validating applied power settings..."
+
+$cfg = powercfg /Q
+
+# --- Lid Action ---
+$acLidOK = $cfg | Select-String "Lid Close Action" -Context 0,5 | Select-String "AC Setting Index.*0x00000000"
+$dcLidOK = $cfg | Select-String "Lid Close Action" -Context 0,5 | Select-String "DC Setting Index.*0x00000001"
+
+# --- Display Timeout ---
+$acDisplayOK = $cfg | Select-String "Video timeout" -Context 0,5 | Select-String "AC Setting Index.*0x0000000A"   # 10 minutes
+$dcDisplayOK = $cfg | Select-String "Video timeout" -Context 0,5 | Select-String "DC Setting Index.*0x00000005"   # 5 minutes
+
+# --- Sleep Timeout ---
+$acSleepOK = $cfg | Select-String "Sleep timeout" -Context 0,5 | Select-String "AC Setting Index.*0x00000000"     # 0 = never
+$dcSleepOK = $cfg | Select-String "Sleep timeout" -Context 0,5 | Select-String "DC Setting Index.*0x00000014"     # 20 minutes
+
+# -----------------------------
+# EVALUATE RESULTS
+# -----------------------------
+
+$results = @{
+    "AC Lid Action"        = $acLidOK
+    "DC Lid Action"        = $dcLidOK
+    "AC Display Timeout"   = $acDisplayOK
+    "DC Display Timeout"   = $dcDisplayOK
+    "AC Sleep Timeout"     = $acSleepOK
+    "DC Sleep Timeout"     = $dcSleepOK
+}
+
+$failed = $results.GetEnumerator() | Where-Object { $_.Value -eq $null }
+
+if ($failed.Count -eq 0) {
+    Write-Output "All power settings validated successfully."
+    exit 0
+}
+
+Write-Output "One or more power settings failed validation:"
+foreach ($f in $failed) {
+    Write-Output " - $($f.Key)"
+}
+
+exit 1
